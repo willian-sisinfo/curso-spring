@@ -1,0 +1,2 @@
+ALTER TABLE person
+	ADD COLUMN enabled smallint NOT NULL DEFAULT 1;

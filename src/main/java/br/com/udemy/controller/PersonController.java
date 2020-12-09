@@ -10,7 +10,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PagedResourcesAssembler;
-import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,17 +26,38 @@ public class PersonController {
     @Autowired
     private PersonService service;
 
+    @Autowired
+    private PagedResourcesAssembler<PersonVO> assembler;
+
     @ApiOperation(value = "Find all people in database", produces = "Json", notes = "Muahaha")
     @GetMapping(produces = {"application/json", "application/xml", "application/x-yaml"})
-    public ResponseEntity<PagedModel<PersonVO>> findAll(
+    public ResponseEntity<?> findAll(
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "limit", defaultValue = "12") int limit,
-            @RequestParam(value = "direction", defaultValue = "asc") String direction,
-            PagedResourcesAssembler assembler) {
+            @RequestParam(value = "direction", defaultValue = "asc") String direction) {
 
         var sortDirection = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, limit, Sort.by(sortDirection, "firstName"));
         Page<PersonVO> vos = service.findAll(pageable);
+        vos
+                .stream()
+                .forEach(p -> p.add(
+                        linkTo(methodOn(PersonController.class).findById(p.getKey())).withSelfRel())
+                );
+        return new ResponseEntity<>(assembler.toModel(vos), HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Find all people in database by the first name", produces = "Json", notes = "Muahaha")
+    @GetMapping(value = "/findPersonByName/{firstName}", produces = {"application/json", "application/xml", "application/x-yaml"})
+    public ResponseEntity<?> findPersonByName(
+            @PathVariable("firstName") String firstName,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "limit", defaultValue = "12") int limit,
+            @RequestParam(value = "direction", defaultValue = "asc") String direction) {
+
+        var sortDirection = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, limit, Sort.by(sortDirection, "firstName"));
+        Page<PersonVO> vos = service.findPersonByName(firstName, pageable);
         vos
                 .stream()
                 .forEach(p -> p.add(
